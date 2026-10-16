@@ -1,0 +1,671 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>METHAI Products</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 10px;
+  background: #f5f6fa;
+  font-family: Arial, sans-serif;
+}
+
+/* TOP COUNTERS */
+.product-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 1400px;
+  margin: 0 auto 15px;
+}
+
+.stat-box {
+  background: #fff;
+  padding: 14px 8px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+}
+
+.stat-box span {
+  display: block;
+  font-size: 11px;
+  color: #777;
+  margin-bottom: 8px;
+}
+
+.stat-box strong {
+  font-size: 25px;
+  color: #17243b;
+}
+
+.stat-box:nth-child(2) strong {
+  color: #087f5b;
+}
+
+.stat-box:nth-child(3) strong {
+  color: #e82b65;
+}
+
+/* MOBILE: 2 PRODUCTS PER ROW */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 1400px;
+  margin: auto;
+}
+
+/* DESKTOP: 4 PRODUCTS PER ROW */
+@media (min-width: 900px) {
+  .products-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+  }
+}
+
+.product-card {
+  min-width: 0;
+  background: #fff;
+  padding: 10px;
+  border-radius: 13px;
+  box-shadow: 0 3px 12px rgba(0,0,0,.05);
+}
+
+.image-box {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #f6f6f6;
+  border: 1px dashed #ddd;
+  border-radius: 10px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.upload-text {
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+}
+
+.remove-image {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 26px;
+  height: 26px;
+  background: white;
+  color: #e82b65;
+  border: none;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.product-number {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #17243b;
+}
+
+label {
+  display: block;
+  margin: 10px 0 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #17243b;
+}
+
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  font-size: 13px;
+  background: white;
+}
+
+input:focus {
+  border-color: #e82b65;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.actions button {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 5px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.save-btn {
+  background: #e82b65;
+  color: white;
+}
+
+.save-btn.saved {
+  background: #087f5b;
+}
+
+.edit-btn {
+  background: #edf0f5;
+  color: #17243b;
+}
+
+.status {
+  margin-top: 7px;
+  font-size: 11px;
+  color: #777;
+  overflow-wrap: anywhere;
+}
+
+#pageMessage {
+  text-align: center;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+/* BIG IMAGE PREVIEW */
+.preview {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.92);
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview.open {
+  display: flex;
+}
+
+.preview img {
+  max-width: 95vw;
+  max-height: 85vh;
+  object-fit: contain;
+}
+
+.preview-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 42px;
+  height: 42px;
+  background: white;
+  color: black;
+  border: none;
+  border-radius: 50%;
+  font-size: 25px;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<!-- TOP COUNTERS -->
+<div class="product-stats">
+
+  <div class="stat-box">
+    <span>Total Products</span>
+    <strong id="totalCount">0</strong>
+  </div>
+
+  <div class="stat-box">
+    <span>Completed ✓</span>
+    <strong id="completedCount">0</strong>
+  </div>
+
+  <div class="stat-box">
+    <span>Pending</span>
+    <strong id="pendingCount">0</strong>
+  </div>
+
+</div>
+
+<div id="pageMessage"></div>
+
+<div class="products-grid" id="productsGrid"></div>
+
+<div class="preview" id="preview">
+  <button class="preview-close" id="previewClose">×</button>
+  <img id="previewImage" alt="Product image">
+</div>
+
+<script>
+const SUPABASE_URL =
+  "https://wxnmflkgxjnjinyawghf.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_bXrJEV0B56dRpAX-cEyNVg_QxR2adg4";
+
+const TABLE = "mithai_products";
+const BUCKET = "mithai-images";
+
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const grid = document.getElementById("productsGrid");
+const pageMessage = document.getElementById("pageMessage");
+
+let products = [];
+const saving = new Set();
+const timers = {};
+
+/* COMPLETED / PENDING COUNTS */
+function updateCounts() {
+  const total = products.length;
+
+  const completed = products.filter(p =>
+    p.image1 &&
+    String(p.name || "").trim() &&
+    Number(p.price) > 0 &&
+    Number(p.quantity) > 0
+  ).length;
+
+  document.getElementById("totalCount").textContent = total;
+  document.getElementById("completedCount").textContent = completed;
+  document.getElementById("pendingCount").textContent =
+    total - completed;
+}
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function getCard(id) {
+  return [...grid.children].find(
+    card => Number(card.dataset.id) === Number(id)
+  );
+}
+
+function setStatus(id, text, isError = false) {
+  const card = getCard(id);
+  if (!card) return;
+
+  const el = card.querySelector(".status");
+  el.textContent = text;
+  el.style.color = isError ? "#dc2626" : "#087f5b";
+}
+
+function productHTML(product, index) {
+  const image = product.image1
+    ? `<img src="${escapeHTML(product.image1)}" alt="Product image">`
+    : `<span class="upload-text">+ Upload Image</span>`;
+
+  return `
+    <div class="product-card" data-id="${product.id}">
+      <div class="product-number">Product ${index + 1}</div>
+
+      <div class="image-box" data-action="image">
+        ${image}
+        ${product.image1 ? `
+          <button class="remove-image"
+            data-action="remove-image">×</button>
+        ` : ""}
+      </div>
+
+      <input type="file" class="file-input"
+        accept="image/*" hidden>
+
+      <label>Product Name</label>
+      <input type="text" class="name-input"
+        value="${escapeHTML(product.name)}"
+        placeholder="Name">
+
+      <label>Price (₹)</label>
+      <input type="number" class="price-input"
+        value="${product.price ?? ""}"
+        min="0" step="0.01"
+        placeholder="Price">
+
+      <label>Quantity</label>
+      <input type="number" class="quantity-input"
+        value="${product.quantity ?? ""}"
+        min="0" step="1"
+        placeholder="Qty">
+
+      <div class="actions">
+        <button class="save-btn"
+          data-action="save">Save</button>
+        <button class="edit-btn"
+          data-action="edit">Edit</button>
+      </div>
+
+      <div class="status"></div>
+    </div>
+  `;
+}
+
+async function loadProducts() {
+  try {
+    const all = [];
+    let offset = 0;
+    const pageSize = 500;
+
+    while (true) {
+      const { data, error } = await db
+        .from(TABLE)
+        .select("id,name,price,quantity,image1")
+        .order("id", { ascending: true })
+        .range(offset, offset + pageSize - 1);
+
+      if (error) throw error;
+
+      all.push(...(data || []));
+
+      if (!data || data.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    products = all;
+
+    grid.innerHTML = products
+      .map((product, index) => productHTML(product, index))
+      .join("");
+
+    updateCounts();
+
+    pageMessage.textContent = products.length
+      ? ""
+      : "No products found.";
+
+  } catch (error) {
+    pageMessage.textContent =
+      "Failed to load products: " + error.message;
+  }
+}
+
+function markChanged(id) {
+  const card = getCard(id);
+  if (!card) return;
+
+  const button = card.querySelector(".save-btn");
+  button.textContent = "Save";
+  button.classList.remove("saved");
+
+  setStatus(id, "Editing...");
+
+  clearTimeout(timers[id]);
+
+  timers[id] = setTimeout(() => {
+    saveProduct(id);
+  }, 1800);
+}
+
+async function saveProduct(id) {
+  if (saving.has(id)) return;
+
+  clearTimeout(timers[id]);
+
+  const card = getCard(id);
+  if (!card) return;
+
+  const name = card.querySelector(".name-input").value.trim();
+  const priceText = card.querySelector(".price-input").value;
+  const quantityText = card.querySelector(".quantity-input").value;
+
+  if (!name || priceText === "" || quantityText === "") {
+    setStatus(id, "Fill all fields", true);
+    return;
+  }
+
+  const price = Number(priceText);
+  const quantity = Number(quantityText);
+
+  if (
+    !Number.isFinite(price) || price < 0 ||
+    !Number.isInteger(quantity) || quantity < 0
+  ) {
+    setStatus(id, "Invalid price or quantity", true);
+    return;
+  }
+
+  saving.add(id);
+  setStatus(id, "Saving...");
+
+  const button = card.querySelector(".save-btn");
+  button.disabled = true;
+
+  try {
+    const { data, error } = await db
+      .from(TABLE)
+      .update({ name, price, quantity })
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error("Update permission denied");
+
+    const product = products.find(p => p.id === id);
+
+    if (product) {
+      product.name = name;
+      product.price = price;
+      product.quantity = quantity;
+    }
+
+    button.textContent = "✓";
+    button.classList.add("saved");
+    setStatus(id, "Saved");
+
+    updateCounts();
+
+  } catch (error) {
+    setStatus(id, error.message, true);
+  } finally {
+    saving.delete(id);
+    button.disabled = false;
+  }
+}
+
+function editProduct(id) {
+  const card = getCard(id);
+  if (!card) return;
+
+  card.querySelectorAll(
+    ".name-input,.price-input,.quantity-input"
+  ).forEach(input => input.disabled = false);
+
+  card.querySelector(".name-input").focus();
+  setStatus(id, "Editing...");
+}
+
+function showPreview(url) {
+  document.getElementById("previewImage").src = url;
+  document.getElementById("preview").classList.add("open");
+}
+
+function closePreview() {
+  document.getElementById("preview").classList.remove("open");
+}
+
+async function uploadImage(id, file) {
+  if (!file || !file.type.startsWith("image/")) return;
+
+  const product = products.find(p => p.id === id);
+  if (!product) return;
+
+  setStatus(id, "Uploading image...");
+
+  try {
+    const extension = (
+      file.name.split(".").pop() || "jpg"
+    ).replace(/[^a-z0-9]/gi, "");
+
+    const path =
+      `products/${id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+
+    const { error: uploadError } = await db.storage
+      .from(BUCKET)
+      .upload(path, file, {
+        contentType: file.type,
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const imageUrl = db.storage
+      .from(BUCKET)
+      .getPublicUrl(path).data.publicUrl;
+
+    const { data, error } = await db
+      .from(TABLE)
+      .update({ image1: imageUrl })
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error("Update permission denied");
+
+    product.image1 = imageUrl;
+
+    const index = products.findIndex(p => p.id === id);
+    getCard(id).outerHTML = productHTML(product, index);
+
+    setStatus(id, "Image saved");
+    updateCounts();
+
+  } catch (error) {
+    setStatus(id, error.message, true);
+  }
+}
+
+async function removeProductImage(id) {
+  if (!confirm("Remove this image?")) return;
+
+  const product = products.find(p => p.id === id);
+  if (!product) return;
+
+  setStatus(id, "Removing image...");
+
+  try {
+    const { data, error } = await db
+      .from(TABLE)
+      .update({ image1: null })
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error("Update permission denied");
+
+    product.image1 = null;
+
+    const index = products.findIndex(p => p.id === id);
+    getCard(id).outerHTML = productHTML(product, index);
+
+    setStatus(id, "Image removed");
+    updateCounts();
+
+  } catch (error) {
+    setStatus(id, error.message, true);
+  }
+}
+
+/* PRODUCT EVENTS */
+grid.addEventListener("click", event => {
+  const card = event.target.closest(".product-card");
+  if (!card) return;
+
+  const id = Number(card.dataset.id);
+  const product = products.find(p => p.id === id);
+
+  const action = event.target.closest("[data-action]")
+    ?.dataset.action;
+
+  if (action === "remove-image") {
+    removeProductImage(id);
+    return;
+  }
+
+  if (action === "image") {
+    if (product?.image1) {
+      showPreview(product.image1);
+    } else {
+      card.querySelector(".file-input").click();
+    }
+    return;
+  }
+
+  if (action === "save") saveProduct(id);
+  if (action === "edit") editProduct(id);
+});
+
+grid.addEventListener("input", event => {
+  const card = event.target.closest(".product-card");
+  if (!card) return;
+
+  if (event.target.matches(
+    ".name-input,.price-input,.quantity-input"
+  )) {
+    markChanged(Number(card.dataset.id));
+  }
+});
+
+grid.addEventListener("change", event => {
+  if (!event.target.matches(".file-input")) return;
+
+  const card = event.target.closest(".product-card");
+  const file = event.target.files[0];
+
+  if (file) uploadImage(Number(card.dataset.id), file);
+  event.target.value = "";
+});
+
+document.getElementById("previewClose")
+  .addEventListener("click", closePreview);
+
+document.getElementById("preview")
+  .addEventListener("click", event => {
+    if (event.target.id === "preview") closePreview();
+  });
+
+loadProducts();
+</script>
+
+</body>
+</html>
